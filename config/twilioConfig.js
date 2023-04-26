@@ -5,14 +5,18 @@ const phone = process.env.TWILIO_NUMBER;
 const client = require("twilio")(accountSid, authToken);
 
 const sendSMS = async (body) => {
-  await client.messages
-    .create({
-      body: body.message,
-      from: phone,
-      to: body.phone,
-    })
-    .then((response) => console.log(response))
-    .catch((err) => console.log(err));
+  try {
+    await client.messages
+      .create({
+        body: body.message,
+        from: phone,
+        to: body.phone,
+      })
+      .then((response) => console.log(response))
+      .catch((err) => console.log(err));
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 module.exports = { sendSMS };

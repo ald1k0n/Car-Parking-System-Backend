@@ -5,6 +5,9 @@ const multer = require("multer");
 const Tesseract = require("tesseract.js");
 const fs = require("fs");
 const cors = require("cors");
+const expireTimeConfig = require("./config/expireConfig");
+
+expireTimeConfig();
 
 const { connect } = require("mongoose");
 
@@ -23,6 +26,7 @@ app.use(
 
 app.use("/api/client", require("./routes/clientRoute"));
 app.use("/api/admin", require("./routes/adminRoute"));
+app.use("/test", require("./routes/testRoute"));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
