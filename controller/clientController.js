@@ -54,14 +54,13 @@ const acceptAccount = (req, res) => {
         isAccepted: true,
       },
     }
-  ).then(() =>
-    res
-      .status(200)
-      .json({
+  )
+    .then(() =>
+      res.status(200).json({
         message: "Account has been accepted",
       })
-      .catch(() => res.sendStatus(500))
-  );
+    )
+    .catch(() => res.sendStatus(500));
 };
 
 const insertCarPlate = async (req, res) => {
@@ -75,7 +74,7 @@ const insertCarPlate = async (req, res) => {
         $set: {
           carPlate,
         },
-      });
+      }).then((response) => res.status(200).json(response));
     } catch (error) {
       res.sendStatus(500);
     }
@@ -85,7 +84,7 @@ const insertCarPlate = async (req, res) => {
 const insertPosition = async (req, res) => {
   try {
     const slots = await Car.find({});
-    const candidate = await Client.findById(req.body.id);
+    const candidate = await Client.findById(req.params.id).populate("position");
     if (slots.length < 18) {
       const newPlace = slots.length + 1;
       const row = Math.ceil(newPlace / 6);
@@ -95,17 +94,19 @@ const insertPosition = async (req, res) => {
         .then((response) => response._id)
         .then(async (id) => {
           try {
-            await Client.findByIdAndUpdate(req.body.id, {
+            await Client.findByIdAndUpdate(req.params.id, {
               $set: {
                 position: id,
                 expirationTime: Date.now() + 10000,
               },
             });
 
-            Client.findOne({ _id: req.body.id })
+            await Client.findOne({ _id: req.params.id })
               .populate("position")
-              .then(async (response) => {
-                await sendSMS({
+              .then((response) => {
+                console.log(response);
+
+                sendSMS({
                   phone: response.phone,
                   message: `\nYour car plate is ${response.carPlate}\n Position: row: ${response.position.row} \n column ${response.position.column}`,
                 });
