@@ -97,7 +97,7 @@ const insertPosition = async (req, res) => {
             await Client.findByIdAndUpdate(req.params.id, {
               $set: {
                 position: id,
-                expirationTime: Date.now() + 10000,
+                expirationTime: Date.now() + 30000,
               },
             });
 
@@ -132,77 +132,6 @@ const insertPosition = async (req, res) => {
   }
 };
 
-// const insertCarPlate = async (req, res) => {
-//   const { carPlate } = req.body;
-//   if (carPlate.length === 0) {
-//     res.status(400).json({ message: "Car plate is empty, try again" });
-//   } else {
-//     const candidate = await Client.findOne({ _id: req.params.id }).populate(
-//       "position"
-//     );
-//     if (candidate.carPlate) {
-//       await sendSMS({
-//         phone: candidate.phone,
-//         message: `You already have a car plate: ${candidate.carPlate} and a car place`,
-//       });
-//       res.status(200).json({
-//         message: "User already has a car plate",
-//       });
-//     } else {
-//       try {
-//         const slots = await Car.find({});
-//         if (slots.length < 18) {
-//           const newPlace = slots.length + 1;
-//           const row = Math.ceil(newPlace / 6);
-//           const column = newPlace % 6 === 0 ? 6 : newPlace % 6;
-//           await new Car({
-//             row,
-//             column,
-//           })
-//             .save()
-//             .then((response) => response._id)
-//             .then(async (id) => {
-//               try {
-//                 await Client.updateOne(
-//                   { _id: req.params.id },
-//                   {
-//                     $set: { carPlate: carPlate, position: id },
-//                   }
-//                 );
-//                 Client.findOne({ _id: req.params.id })
-//                   .populate("position")
-//                   .then(async (response) => {
-//                     await sendSMS({
-//                       phone: response.phone,
-//                       message: `\nYour car plate is ${response.carPlate}\n Position: row: ${response.position.row} \n column ${response.position.column}`,
-//                     });
-//                   });
-//               } catch (error) {
-//                 console.log(error);
-//                 res.sendStats(500);
-//               }
-//               res.status(201).json({ message: "Car plate added into user" });
-//             })
-//             .catch(() => res.sendStatus(500));
-//         } else {
-//           await sendSMS({
-//             phone: candidate.phone,
-//             message: `Sorry, parking lot is full`,
-//           });
-
-//           res.status(200).json({
-//             message: "Parking lot is full",
-//           });
-//         }
-//       } catch (err) {
-//         console.log(err);
-
-//         res.sendStatus(500);
-//       }
-//     }
-//   }
-// };
-
 const getAllUsers = (req, res) => {
   Client.find({})
     .populate("position")
@@ -222,6 +151,22 @@ const getPositionById = (req, res) => {
     .catch(() => res.sendStatus(500));
 };
 
+const checkCarPosition = async (req, res) => {
+  const { row, column } = req.params;
+
+  try {
+    Car.findOne({ row, column }).then((response) => {
+      if (response) {
+        res.status(200).json(response);
+      } else {
+        res.status(404).json({ message: "Car not found" });
+      }
+    });
+  } catch (error) {
+    res.sendStatus(500);
+  }
+};
+
 module.exports = {
   getUserData,
   addUserData,
@@ -230,4 +175,5 @@ module.exports = {
   getPositionById,
   insertPosition,
   acceptAccount,
+  checkCarPosition,
 };

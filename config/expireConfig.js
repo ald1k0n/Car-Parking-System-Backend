@@ -6,11 +6,11 @@ module.exports = async function () {
   try {
     const users = await Client.find({}).populate("position");
     users.forEach((time) => {
-      if (time.position) {
-        schedule.scheduleJob(time.position.expirationTime, async () => {
+      if (time.expirationTime) {
+        schedule.scheduleJob(time.expirationTime, async () => {
           await sendSMS({
             phone: time.phone,
-            message: "Your time is coming up in 5 minutes",
+            message: "Your time is coming up!",
           });
         });
       }

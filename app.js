@@ -5,9 +5,32 @@ const multer = require("multer");
 const Tesseract = require("tesseract.js");
 const fs = require("fs");
 const cors = require("cors");
-const expireTimeConfig = require("./config/expireConfig");
+const Client = require("./models/Client");
+const schedule = require("node-schedule");
 
-expireTimeConfig();
+const { sendSMS } = require("./config/twilioConfig");
+
+// const expireTime = () => {
+//   try {
+//     Client.find({})
+//       .populate("position")
+//       .then((users) => {
+//         users.forEach((user) => {
+//           schedule.scheduleJob(user.expirationTime, async () => {
+//             await sendSMS({
+//               phone: user.phone,
+//               message: "Your time is coming up!",
+//             });
+//           });
+//         });
+//       })
+//       .catch((err) => console.error(err));
+//   } catch (error) {
+//     console.error(error);
+//   }
+// };
+
+// expireTime();
 
 const { connect } = require("mongoose");
 
