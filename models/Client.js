@@ -15,10 +15,6 @@ const userCredentials = new Schema({
     type: Boolean,
     default: false,
   },
-  expirationTime: {
-    type: Number,
-    default: null,
-  },
 });
 
 const Client = model("Client", userCredentials);

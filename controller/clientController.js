@@ -1,7 +1,7 @@
 const Client = require("../models/Client");
 const Car = require("../models/Car");
 
-const { sendSMS } = require("../config/twilioConfig");
+const { sendSMS, scheduleSMS } = require("../config/twilioConfig");
 
 const getUserData = async (req, res) => {
   try {
@@ -97,7 +97,6 @@ const insertPosition = async (req, res) => {
             await Client.findByIdAndUpdate(req.params.id, {
               $set: {
                 position: id,
-                expirationTime: Date.now() + 30000,
               },
             });
 
@@ -109,6 +108,10 @@ const insertPosition = async (req, res) => {
                 sendSMS({
                   phone: response.phone,
                   message: `\nYour car plate is ${response.carPlate}\n Position: row: ${response.position.row} \n column ${response.position.column}`,
+                });
+
+                scheduleSMS({
+                  phone: response.phone,
                 });
               })
               .then(() =>
