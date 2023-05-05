@@ -1,5 +1,8 @@
+require("dotenv").config();
 const Client = require("../models/Client");
 const Car = require("../models/Car");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const { sendSMS, scheduleSMS } = require("../config/twilioConfig");
 
@@ -19,10 +22,11 @@ const getUserData = async (req, res) => {
 };
 
 const addUserData = (req, res) => {
-  const { name, phone, idCardNumber } = req.body;
+  const { name, phone, idCardNumber, password } = req.body;
   const randomCode = Math.floor(Math.random() * 99999);
   try {
     new Client({
+      password: bcrypt.hashSync(password, 10),
       name,
       phone,
       idCardNumber,
@@ -170,6 +174,31 @@ const checkCarPosition = async (req, res) => {
   }
 };
 
+const loginUser = (req, res) => {
+  const { phone, password } = req.body;
+
+  Client.findOne({ phone }).then((user) => {
+    if (!user) return res.status(400).json({ message: "User not found" });
+    else {
+      if (!bcrypt.compareSync(password, user.password)) {
+        return res.status(400).json({ message: "Password is incorrect" });
+      } else {
+        const token = jwt.sign({ id: user._id }, process.env.JWT_TOKEN, {
+          expiresIn: 86400,
+        });
+        const values = {
+          token,
+          name: user.name,
+          phone: user.phone,
+          idCardNumber: user.idCardNumber,
+          isAccepted: user.isAccepted,
+        };
+        return res.status(200).json(values);
+      }
+    }
+  });
+};
+
 module.exports = {
   getUserData,
   addUserData,
@@ -178,5 +207,6 @@ module.exports = {
   getPositionById,
   insertPosition,
   acceptAccount,
+  loginUser,
   checkCarPosition,
 };

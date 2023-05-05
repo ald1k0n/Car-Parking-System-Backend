@@ -10,28 +10,6 @@ const schedule = require("node-schedule");
 
 const { sendSMS } = require("./config/twilioConfig");
 
-// const expireTime = () => {
-//   try {
-//     Client.find({})
-//       .populate("position")
-//       .then((users) => {
-//         users.forEach((user) => {
-//           schedule.scheduleJob(user.expirationTime, async () => {
-//             await sendSMS({
-//               phone: user.phone,
-//               message: "Your time is coming up!",
-//             });
-//           });
-//         });
-//       })
-//       .catch((err) => console.error(err));
-//   } catch (error) {
-//     console.error(error);
-//   }
-// };
-
-// expireTime();
-
 const { connect } = require("mongoose");
 
 connect("mongodb://localhost:27017/ocr")
