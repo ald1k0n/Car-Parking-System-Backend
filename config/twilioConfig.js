@@ -27,14 +27,13 @@ const scheduleSMS = async (body) => {
       currentDateWithMilliseconds.getTime() + 900000
     );
     const isoValidFormat = futureDateWithMilliseconds.toISOString();
-    console.log(isoValidFormat);
     await client.messages
       .create({
         messagingServiceSid: messageSID,
         body: "Time is up! Do you want to extend your parking time?",
         from: phone,
         to: body.phone,
-        sendAt: isoValidFormat,
+        sendAt: body.time,
         scheduleType: "fixed",
       })
       .then((response) => console.log(response))

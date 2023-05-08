@@ -10,6 +10,7 @@ const {
   acceptAccount,
   checkCarPosition,
   loginUser,
+  makePayment,
 } = require("../controller/clientController");
 
 const verifyToken = require("../middleware/authMiddleware");
@@ -20,11 +21,13 @@ app.post("/", addUserData);
 app.get("/:id", getUserData);
 app.put("/code", acceptAccount);
 
-app.patch("/:id", verifyToken, insertCarPlate);
-app.put("/position/:id", verifyToken, insertPosition);
+app.put("/payment/:id", makePayment);
+
+app.patch("/:id", insertCarPlate);
+app.put("/position/:id", insertPosition);
 app.get("/me/:id", getPositionById);
 app.post("/login", loginUser);
 
-app.get("/car/:row/:column", verifyToken, checkCarPosition);
+app.get("/car/:row/:column", checkCarPosition);
 
 module.exports = app;

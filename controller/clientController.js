@@ -8,11 +8,18 @@ const { sendSMS, scheduleSMS } = require("../config/twilioConfig");
 
 const getUserData = async (req, res) => {
   try {
-    const user = await Client.findOne({ _id: req.params.id }).populate(
-      "position"
-    );
+    const user = await Client.findOne({ _id: req.params.id });
+    const position = await Car.findOne({ clientId: req.params.id });
+
+    const value = {
+      user,
+      position,
+    };
+
+    console.log(value);
+
     if (user) {
-      res.status(200).json(user);
+      res.status(200).json(value);
     } else {
       res.sendStatus(404);
     }
@@ -85,57 +92,153 @@ const insertCarPlate = async (req, res) => {
   }
 };
 
+// const insertPosition = async (req, res) => {
+//   try {
+//     const slots = await Car.find({});
+//     const candidate = await Client.findById(req.params.id).populate("position");
+//     if (slots.length < 18) {
+//       const newPlace = slots.length + 1;
+//       const row = Math.ceil(newPlace / 6);
+//       const column = newPlace % 6 === 0 ? 6 : newPlace % 6;
+
+//       await Car.create({ row, column })
+//         .then((response) => response._id)
+//         .then(async (id) => {
+//           try {
+//             await Client.findByIdAndUpdate(req.params.id, {
+//               $set: {
+//                 position: id,
+//               },
+//             });
+
+//             await Client.findOne({ _id: req.params.id })
+//               .populate("position")
+//               .then((response) => {
+//                 console.log(response);
+
+//                 sendSMS({
+//                   phone: response.phone,
+//                   message: `\nYour car plate is ${response.carPlate}\n Position: row: ${response.position.row} \n column ${response.position.column}`,
+//                 });
+
+//                 scheduleSMS({
+//                   phone: response.phone,
+//                 });
+//               })
+//               .then(() =>
+//                 res.status(201).json({ message: "Car plate added into user" })
+//               );
+//           } catch (error) {
+//             res.sendStatus(400);
+//           }
+//         });
+//     } else {
+//       await sendSMS({
+//         phone: candidate.phone,
+//         message: `Sorry, parking lot is full`,
+//       });
+//       res.status(200).json({
+//         message: "Parking lot is full",
+//       });
+//     }
+//   } catch (error) {
+//     res.sendStatus(500);
+//   }
+// };
+
 const insertPosition = async (req, res) => {
+  const { id } = req.params;
   try {
-    const slots = await Car.find({});
-    const candidate = await Client.findById(req.params.id).populate("position");
-    if (slots.length < 18) {
-      const newPlace = slots.length + 1;
-      const row = Math.ceil(newPlace / 6);
-      const column = newPlace % 6 === 0 ? 6 : newPlace % 6;
-
-      await Car.create({ row, column })
-        .then((response) => response._id)
-        .then(async (id) => {
-          try {
-            await Client.findByIdAndUpdate(req.params.id, {
-              $set: {
-                position: id,
-              },
-            });
-
-            await Client.findOne({ _id: req.params.id })
-              .populate("position")
-              .then((response) => {
-                console.log(response);
-
-                sendSMS({
-                  phone: response.phone,
-                  message: `\nYour car plate is ${response.carPlate}\n Position: row: ${response.position.row} \n column ${response.position.column}`,
-                });
-
-                scheduleSMS({
-                  phone: response.phone,
-                });
-              })
-              .then(() =>
-                res.status(201).json({ message: "Car plate added into user" })
-              );
-          } catch (error) {
-            res.sendStatus(400);
+    const candidate = await Car.find({
+      clientId: null,
+    });
+    console.log(candidate, "candidate");
+    if (candidate.length > 0) {
+      const placeId = candidate[0]._id;
+      console.log(placeId, "place id");
+      try {
+        await Car.updateOne(
+          { _id: placeId },
+          {
+            $set: {
+              clientId: id,
+            },
           }
+        ).then(() => {
+          Car.findOne({ clientId: id })
+            .populate("clientId")
+            .then(async (response) => {
+              await sendSMS({
+                phone: response.clientId.phone,
+                message: `\nYour car plate is ${response.clientId.carPlate}\n Position: row: ${response.row} \n column ${response.column}.\n Don't forget to pay for the parking period`,
+              });
+              res.status(201).json({
+                message: `\nYour car plate is ${response.clientId.carPlate}\n Position: row: ${response.row} \n column ${response.column}.\n Don't forget to pay for the parking period`,
+              });
+            });
         });
+      } catch (error) {
+        res.status(400).json(error);
+      }
     } else {
-      await sendSMS({
-        phone: candidate.phone,
-        message: `Sorry, parking lot is full`,
-      });
-      res.status(200).json({
-        message: "Parking lot is full",
-      });
+      res.status(404).send("No available car places.");
     }
   } catch (error) {
     res.sendStatus(500);
+  }
+};
+
+const makePayment = async (req, res) => {
+  const { isPayment, period } = req.body;
+  const { id } = req.params;
+
+  const periods = {
+    0: new Date(new Date().getTime() + 900000).toISOString(),
+    1: new Date(new Date().getTime() + 3_600_000).toISOString(),
+    2: new Date(new Date().getTime() + 10_800_000).toISOString(),
+  };
+
+  if (!isPayment) {
+    Car.updateOne(
+      { clientId: id },
+      {
+        $set: {
+          clientId: null,
+        },
+      }
+    );
+  } else {
+    try {
+      (async function () {
+        Car.updateOne(
+          { clientId: id },
+          {
+            $set: {
+              isPayed: true,
+            },
+          }
+        );
+      })();
+    } catch (error) {
+      console.log(error);
+    }
+
+    Client.findById(id)
+      .then(async (response) => {
+        const time = periods[period];
+        await sendSMS({
+          message: `Your time period is ${time}`,
+          phone: response.phone,
+        });
+        await scheduleSMS({
+          phone: response.phone,
+          time,
+        });
+        res.status(200).json({
+          time,
+        });
+      })
+      .catch((err) => res.status(400).json(err));
   }
 };
 
@@ -209,4 +312,5 @@ module.exports = {
   acceptAccount,
   loginUser,
   checkCarPosition,
+  makePayment,
 };
