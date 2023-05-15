@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "@types/tesseract.js": "^2.0.0"
+  },
+  "scripts": {
+    "start": "nodemon app"
   }
 }

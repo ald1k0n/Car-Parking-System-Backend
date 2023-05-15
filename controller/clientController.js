@@ -16,8 +16,6 @@ const getUserData = async (req, res) => {
       position,
     };
 
-    console.log(value);
-
     if (user) {
       res.status(200).json(value);
     } else {
@@ -188,6 +186,19 @@ const insertPosition = async (req, res) => {
   }
 };
 
+const getAllEmptyPositions = (req, res) => {
+  Car.find({})
+    .populate("clientId")
+    .then((response) => {
+      console.log(response);
+      res.status(200).json(response);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+      console.log(err);
+    });
+};
+
 const makePayment = async (req, res) => {
   const { isPayment, period } = req.body;
   const { id } = req.params;
@@ -209,22 +220,28 @@ const makePayment = async (req, res) => {
     );
   } else {
     try {
-      (async function () {
-        Car.updateOne(
-          { clientId: id },
-          {
-            $set: {
-              isPayed: true,
-            },
-          }
-        );
-      })();
+      await Car.updateOne(
+        { clientId: id },
+        {
+          $set: {
+            isPayed: true,
+          },
+        }
+      );
     } catch (error) {
       console.log(error);
     }
 
     Client.findById(id)
       .then(async (response) => {
+        Car.updateOne({ clientId: id }, { $set: { isPayed: true } })
+          .then(() => {
+            console.log("Done");
+          })
+          .catch((err) => {
+            console.error(err);
+            return;
+          });
         const time = periods[period];
         await sendSMS({
           message: `Your time period is ${time}`,
@@ -242,23 +259,11 @@ const makePayment = async (req, res) => {
   }
 };
 
-const getAllUsers = (req, res) => {
-  Client.find({})
-    .populate("position")
-    .then((response) => res.status(200).json(response))
-    .catch(() => res.sendStatus(500));
-};
-
 const getPositionById = (req, res) => {
-  Client.findOne({ _id: req.params.id })
-    .populate("position")
-    .then((response) =>
-      res.status(200).json({
-        position: response.position,
-        carPlate: response.carPlate,
-      })
-    )
-    .catch(() => res.sendStatus(500));
+  Car.findOne({ clientId: req.params.id })
+    .populate("clientId")
+    .then((response) => res.status(200).json(response))
+    .catch((err) => res.sendStatus(500));
 };
 
 const checkCarPosition = async (req, res) => {
@@ -275,6 +280,25 @@ const checkCarPosition = async (req, res) => {
   } catch (error) {
     res.sendStatus(500);
   }
+};
+
+const deletePayment = async (req, res) => {
+  const { id } = req.params;
+
+  Car.findOneAndUpdate(
+    { clientId: id },
+    {
+      $set: {
+        clientId: null,
+      },
+    }
+  )
+    .then(() =>
+      res.status(200).json({
+        message: "You didn't pay for a rent, your place is going to be empty",
+      })
+    )
+    .catch((err) => res.status(400).json(err));
 };
 
 const loginUser = (req, res) => {
@@ -295,6 +319,7 @@ const loginUser = (req, res) => {
           phone: user.phone,
           idCardNumber: user.idCardNumber,
           isAccepted: user.isAccepted,
+          id: user._id,
         };
         return res.status(200).json(values);
       }
@@ -302,15 +327,95 @@ const loginUser = (req, res) => {
   });
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const candidate = await Client.findOne({ _id: req.params.id });
+    if (!candidate)
+      res.status(404).json({
+        message: "User not found",
+      });
+    else {
+      if (!bcrypt.compareSync(req.body.password, candidate.password)) {
+        return res.status(404).json({ message: "Password didn't match" });
+      } else {
+        try {
+          await Client.updateOne(
+            {
+              _id: req.params.id,
+            },
+            {
+              $set: {
+                password: bcrypt.hashSync(req.body.newPassword, 10),
+              },
+            }
+          );
+          res.status(201).json({
+            message:
+              "Password has been changed, in the next authentication you shall enter with your new password",
+          });
+        } catch (error) {
+          res.sendStatus(500);
+        }
+      }
+    }
+  } catch (error) {
+    res.sendStatus(500);
+  }
+};
+
+const rentCarPosition = async (req, res) => {
+  const { row, column } = req.params;
+  const { clientId } = req.query;
+  try {
+    const position = await Car.findOne({ row, column });
+    if (position.clientId) {
+      res.status(400).json({
+        message: "That place already rented",
+      });
+    } else {
+      await Car.updateOne(
+        {
+          row,
+          column,
+        },
+        {
+          $set: {
+            clientId,
+          },
+        }
+      );
+
+      Car.findOne({ clientId })
+        .populate("clientId")
+        .then(async (response) => {
+          await sendSMS({
+            phone: response.clientId.phone,
+            message: `\nYour car plate is ${response.clientId.carPlate}\n Position: row: ${response.row} \n column ${response.column}.\n Don't forget to pay for the parking period`,
+          });
+        })
+        .catch((err) => console.error(err));
+
+      res.status(201).json({
+        message: `Your position in row:${row}, column:${column}`,
+      });
+    }
+  } catch (error) {
+    res.sendStatus(500);
+  }
+};
+
 module.exports = {
   getUserData,
   addUserData,
   insertCarPlate,
-  getAllUsers,
   getPositionById,
   insertPosition,
   acceptAccount,
   loginUser,
   checkCarPosition,
   makePayment,
+  getAllEmptyPositions,
+  deletePayment,
+  changePassword,
+  rentCarPosition,
 };

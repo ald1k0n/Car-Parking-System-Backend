@@ -2,7 +2,6 @@ const express = require("express");
 const app = express();
 const {
   addUserData,
-  getAllUsers,
   getPositionById,
   getUserData,
   insertCarPlate,
@@ -11,22 +10,28 @@ const {
   checkCarPosition,
   loginUser,
   makePayment,
+  getAllEmptyPositions,
+  deletePayment,
+  changePassword,
+  rentCarPosition,
 } = require("../controller/clientController");
 
-const verifyToken = require("../middleware/authMiddleware");
-
-app.get("/", getAllUsers);
 app.post("/", addUserData);
+app.get("/position", getAllEmptyPositions);
 
 app.get("/:id", getUserData);
+app.patch("/:id", deletePayment);
+app.patch("/:id/password", changePassword);
 app.put("/code", acceptAccount);
+app.post("/login", loginUser);
+
+app.put("/position/:row/:column", rentCarPosition);
 
 app.put("/payment/:id", makePayment);
 
 app.patch("/:id", insertCarPlate);
 app.put("/position/:id", insertPosition);
 app.get("/me/:id", getPositionById);
-app.post("/login", loginUser);
 
 app.get("/car/:row/:column", checkCarPosition);
 
