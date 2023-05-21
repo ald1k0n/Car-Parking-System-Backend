@@ -404,6 +404,46 @@ const rentCarPosition = async (req, res) => {
   }
 };
 
+const checkAccess = async (req, res) => {
+  const { clientId } = req.body;
+  try {
+    const pos = await Car.findOne({ clientId });
+    if (!pos) {
+      res.status(404).json({
+        message:
+          "You don't have an access for a parking. Would you make a rent?",
+      });
+    } else {
+      if (parseInt(pos.expireTime) <= Date.now()) {
+        Car.updateOne(
+          {
+            clientId,
+          },
+          {
+            $set: {
+              clientId: null,
+              isPayed: false,
+              expireTime: null,
+            },
+          }
+        )
+          .then(() => {
+            res.status(200).json({
+              message: "Your expire time has been up",
+            });
+          })
+          .catch((err) => res.status(500).json(err));
+      } else {
+        res.status(200).json({
+          message: "Access granted",
+        });
+      }
+    }
+  } catch (error) {
+    res.status(500).json(error);
+  }
+};
+
 module.exports = {
   getUserData,
   addUserData,
@@ -418,4 +458,5 @@ module.exports = {
   deletePayment,
   changePassword,
   rentCarPosition,
+  checkAccess,
 };

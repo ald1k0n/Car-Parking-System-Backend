@@ -12,6 +12,10 @@ const CarPlace = new Schema({
     type: Boolean,
     default: false,
   },
+  expireTime: {
+    type: String,
+    default: null,
+  },
 });
 
 const Car = model("CarPlace", CarPlace);

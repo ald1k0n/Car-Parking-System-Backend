@@ -14,6 +14,7 @@ const {
   deletePayment,
   changePassword,
   rentCarPosition,
+  checkAccess,
 } = require("../controller/clientController");
 
 app.post("/", addUserData);
@@ -24,6 +25,8 @@ app.patch("/:id", deletePayment);
 app.patch("/:id/password", changePassword);
 app.put("/code", acceptAccount);
 app.post("/login", loginUser);
+
+app.post("/access", checkAccess);
 
 app.put("/position/:row/:column", rentCarPosition);
 
