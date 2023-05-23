@@ -32,7 +32,7 @@ app.put("/position/:row/:column", rentCarPosition);
 
 app.put("/payment/:id", makePayment);
 
-app.patch("/:id", insertCarPlate);
+app.patch("/carPlate/:id", insertCarPlate);
 app.put("/position/:id", insertPosition);
 app.get("/me/:id", getPositionById);
 
